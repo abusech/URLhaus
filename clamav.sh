@@ -14,37 +14,39 @@ CLAMGROUP="clamav"
 
 RELOAD=0
 
-lockfile -r 0 /tmp/local.the.lock 2>/dev/null || exit 1
+TMPDIR=$(mktemp -d /tmp/urlhaus.XXXXXX) || exit 1
+touch $TMPDIR/local.the.lock 2>/dev/null || exit 1
 
-rm -rf /tmp/urlhaus
-mkdir /tmp/urlhaus
+curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o $TMPDIR/urlhaus.ndb
 
-curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o /tmp/urlhaus/urlhaus.ndb
-
-if [ $? -eq 0 ]; then
-  clamscan --quiet -d /tmp/urlhaus /tmp/urlhaus 2>&1 >/dev/null
-  if [ $? -eq 0 ]; then
-    if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
-      MD5old=`md5sum "$CLAMDIR"/urlhaus.ndb`
-      MD5new=`md5sum /tmp/urlhaus/urlhaus.ndb`
-      if ! [ "$MD5old" = "$MD5new" ]; then
+if [[ $? -eq 0 ]]; then
+  clamscan --quiet -d $TMPDIR $TMPDIR 2>&1 >/dev/null
+  if [[ $? -ne 0 ]]; then
+    echo "downloaded file is not sane" >&2
+    exit 1
+  else
+    if [[ -f "$CLAMDIR"/urlhaus.ndb ]]; then
+      MD5old=$(md5sum "$CLAMDIR"/urlhaus.ndb)
+      MD5new=$(md5sum $TMPDIR/urlhaus.ndb)
+      if [[ "$MD5old" != "$MD5new" ]]; then
         # Updated file
-        cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
+        cp $TMPDIR/urlhaus.ndb $CLAMDIR
         chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
         RELOAD=1
       fi
     else
       # Looks like it's the first run
-      cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
+      cp $TMPDIR/urlhaus.ndb $CLAMDIR
       chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
       RELOAD=1
     fi
   fi
-fi
+ fi
 
-if [ $RELOAD -eq 1 ]; then
-  clamdscan --reload
-fi
+rm -rf /$TMPDIR 
 
-rm -rf /tmp/urlhaus
-rm -f /tmp/local.the.lock
+if [[ $RELOAD -eq 1 ]]; then
+  if type -a clamdscan >/dev/null 2>&1; then
+     clamdscan --reload
+  fi
+fi
