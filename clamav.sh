@@ -31,8 +31,8 @@ exlock_now || exit 1
 ### BEGIN OF SCRIPT ###
 
 CLAMDIR="/var/lib/clamav"
-CLAMUSER="clamav"
-CLAMGROUP="clamav"
+CLAMUSER="clamupdate"
+CLAMGROUP="clamupdate"
 
 # Don't change anything below this line
 
