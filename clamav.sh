@@ -7,8 +7,15 @@
 # Please set up the following variables to fit your system
 
 ### HEADER ###
- 
-LOCKFILE="/var/lock/`basename $0`"
+LOCKDIR="/var/lock/" 
+
+# check if lock directory exists:
+if [! -d $LOCKDIR ]
+then
+	LOCKDIR="`dirname $0`"
+fi
+
+LOCKFILE="$LOCKDIR/`basename $0`.lock"
 LOCKFD=99
 
 # PRIVATE
@@ -34,30 +41,46 @@ CLAMDIR="/var/lib/clamav"
 CLAMUSER="clamupdate"
 CLAMGROUP="clamupdate"
 
+# check if user exists, if not then set alternative:
+if [! `/usr/bin/id -u $CLAMUSER >/dev/null 2>&1` ]
+then
+	CLAMUSER="clamav"
+	CLAMGROUP="clamav"
+fi
+
 # Don't change anything below this line
 
 RELOAD=0
 
-rm -rf /tmp/urlhaus
-mkdir /tmp/urlhaus
+# Create TEMP directory:
+TMPDIR="`mktemp`"
+mkdir -p $TMPDIR
 
-curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o /tmp/urlhaus/urlhaus.ndb
+# check what binary provides MD5 function:
+MD5BIN="md5sum"
+if [! `command -v $MD5BIN >/dev/null 2>&1`]
+then
+	MD5BIN="md5"
+fi
+
+# download databases:
+curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o $TMPDIR/urlhaus.ndb
 
 if [ $? -eq 0 ]; then
-  clamscan --quiet -d /tmp/urlhaus /tmp/urlhaus 2>&1 >/dev/null
+  clamscan --quiet -d $TMPDIR $TMPDIR 2>&1 >/dev/null
   if [ $? -eq 0 ]; then
     if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
-      MD5old=`md5sum "$CLAMDIR"/urlhaus.ndb`
-      MD5new=`md5sum /tmp/urlhaus/urlhaus.ndb`
+      MD5old=`md5 "$CLAMDIR"/urlhaus.ndb`
+      MD5new=`md5 $TMPDIR/urlhaus.ndb`
       if ! [ "$MD5old" = "$MD5new" ]; then
         # Updated file
-        cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
+        cp $TMPDIR/urlhaus.ndb $CLAMDIR
         chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
         RELOAD=1
       fi
     else
       # Looks like it's the first run
-      cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
+      cp $TMPDIR/urlhaus.ndb $CLAMDIR
       chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
       RELOAD=1
     fi
@@ -68,4 +91,4 @@ if [ $RELOAD -eq 1 ]; then
   clamdscan --reload
 fi
 
-rm -rf /tmp/urlhaus
+rm -rf $TMPDIR
