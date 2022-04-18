@@ -41,7 +41,7 @@ then
 	if [ $PLATFORM = "freebsd" ]
 	then 
 		echo "Missing required package: sysutils/flock"
-		echo "Please, execute manually: su -c $FBSD_FLOCK"
+		echo "Please, execute manually: su -c pkg install $FBSD_FLOCK"
 		exit
 	fi
 fi
