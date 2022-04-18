@@ -36,12 +36,13 @@ fi
 # PRIVATE
 LOCKCMD="flock"
 FBSD_FLOCK="sysutils/flock"
-if [ ! `command -v $LOCKCMD > /dev/null 2> &1` ]
+if [ ! `command -v $LOCKCMD > /dev/null 2> /dev/null` ]
 then
 	if [ $PLATFORM = "freebsd" ]
 	then 
-		echo "Installing required package: sysutils/flock"
-		`su -c $FBSD_FLOCK`
+		echo "Missing required package: sysutils/flock"
+		echo "Please, execute manually: su -c $FBSD_FLOCK"
+		exit
 	fi
 fi
 
@@ -68,7 +69,7 @@ CLAMUSER="clamupdate"
 CLAMGROUP="clamupdate"
 
 # check if user exists, if not then set alternative:
-if [ ! `/usr/bin/id -u $CLAMUSER > /dev/null 2> &1` ]
+if [ ! `/usr/bin/id -u $CLAMUSER > /dev/null 2> /dev/null` ]
 then
 	CLAMUSER="clamav"
 	CLAMGROUP="clamav"
@@ -84,7 +85,7 @@ mkdir -p $TMPDIR
 
 # check what binary provides MD5 function:
 MD5BIN="md5sum"
-if [ ! `command -v $MD5BIN > /dev/null 2> &1`]
+if [ ! `command -v $MD5BIN > /dev/null 2> /dev/null`]
 then
 	MD5BIN="md5"
 fi
@@ -94,7 +95,7 @@ fi
 curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o $TMPDIR/urlhaus.ndb
 
 if [ $? -eq 0 ]; then
-	clamscan --quiet -d $TMPDIR $TMPDIR 2> &1 >/dev/null
+	clamscan --quiet -d $TMPDIR $TMPDIR 2> /dev/null >/dev/null
 	if [ $? -eq 0 ]; then
 		if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
 			MD5old=`md5 "$CLAMDIR"/urlhaus.ndb`
