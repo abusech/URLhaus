@@ -7,19 +7,45 @@
 # Please set up the following variables to fit your system
 
 ### HEADER ###
-LOCKDIR="/var/lock" 
-
+LOCKDIR="/var/lock"
+cd `dirname $0`
+SCRIPTPATH="`pwd`"
 # check if lock directory exists:
-if [! -d $LOCKDIR ]
+if [ ! -d $LOCKDIR ]
 then
-	LOCKDIR="`dirname $0`"
+	LOCKDIR="$SCRIPTPATH"
+	echo $LOCKDIR
 fi
 
 LOCKFILE="$LOCKDIR/`basename $0`.lock"
-LOCKFD=99
+LOCKFD=9
+
+
+# check OS:
+PLATFORM="unknown"
+UNAMESTR="`uname`"
+if [ $UNAMESTR = "FreeBSD" ]
+then
+	PLATFORM="freebsd"
+elif [ $UNAMESTR = "Linux" ]
+then
+	PLATFORM="linux"
+fi
+
 
 # PRIVATE
-_lock()             { flock -$1 $LOCKFD; }
+LOCKCMD="flock"
+FBSD_FLOCK="sysutils/flock"
+if [ ! `command -v $LOCKCMD > /dev/null 2> &1` ]
+then
+	if [ $PLATFORM = "freebsd" ]
+	then 
+		echo "Installing required package: sysutils/flock"
+		`su -c $FBSD_FLOCK`
+	fi
+fi
+
+_lock()             { $LOCKCMD -$1 $LOCKFD; }
 _no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; }
 _prepare_locking()  { eval "exec $LOCKFD>\"$LOCKFILE\""; trap _no_more_locking EXIT; }
 
@@ -42,7 +68,7 @@ CLAMUSER="clamupdate"
 CLAMGROUP="clamupdate"
 
 # check if user exists, if not then set alternative:
-if [! `/usr/bin/id -u $CLAMUSER >/dev/null 2>&1` ]
+if [ ! `/usr/bin/id -u $CLAMUSER > /dev/null 2> &1` ]
 then
 	CLAMUSER="clamav"
 	CLAMGROUP="clamav"
@@ -58,37 +84,38 @@ mkdir -p $TMPDIR
 
 # check what binary provides MD5 function:
 MD5BIN="md5sum"
-if [! `command -v $MD5BIN >/dev/null 2>&1`]
+if [ ! `command -v $MD5BIN > /dev/null 2> &1`]
 then
 	MD5BIN="md5"
 fi
+
 
 # download databases:
 curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o $TMPDIR/urlhaus.ndb
 
 if [ $? -eq 0 ]; then
-  clamscan --quiet -d $TMPDIR $TMPDIR 2>&1 >/dev/null
-  if [ $? -eq 0 ]; then
-    if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
-      MD5old=`md5 "$CLAMDIR"/urlhaus.ndb`
-      MD5new=`md5 $TMPDIR/urlhaus.ndb`
-      if ! [ "$MD5old" = "$MD5new" ]; then
-        # Updated file
-        cp $TMPDIR/urlhaus.ndb $CLAMDIR
-        chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
-        RELOAD=1
-      fi
-    else
-      # Looks like it's the first run
-      cp $TMPDIR/urlhaus.ndb $CLAMDIR
-      chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
-      RELOAD=1
-    fi
-  fi
+	clamscan --quiet -d $TMPDIR $TMPDIR 2> &1 >/dev/null
+	if [ $? -eq 0 ]; then
+		if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
+			MD5old=`md5 "$CLAMDIR"/urlhaus.ndb`
+			MD5new=`md5 $TMPDIR/urlhaus.ndb`
+			if ! [ "$MD5old" = "$MD5new" ]; then
+				# Updated file
+				cp $TMPDIR/urlhaus.ndb $CLAMDIR
+				chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
+				RELOAD=1
+			fi
+		else
+			# Looks like it's the first run
+			cp $TMPDIR/urlhaus.ndb $CLAMDIR
+			chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
+			RELOAD=1
+		fi
+	fi
 fi
 
 if [ $RELOAD -eq 1 ]; then
-  clamdscan --reload
+	clamdscan --reload
 fi
 
 rm -rf $TMPDIR
