@@ -14,7 +14,6 @@ SCRIPTPATH="`pwd`"
 if [ ! -d $LOCKDIR ]
 then
 	LOCKDIR="$SCRIPTPATH"
-	echo $LOCKDIR
 fi
 
 LOCKFILE="$LOCKDIR/`basename $0`.lock"
@@ -22,6 +21,7 @@ LOCKFD=9
 
 
 # check OS:
+echo "1 of 7. Checking OS."
 PLATFORM="unknown"
 UNAMESTR="`uname`"
 if [ $UNAMESTR = "FreeBSD" ]
@@ -45,6 +45,7 @@ then
 		exit
 	fi
 fi
+echo "Step 1 completed"
 
 _lock()             { $LOCKCMD -$1 $LOCKFD; }
 _no_more_locking()  { _lock u; _lock xn && rm -f $LOCKFILE; }
@@ -63,7 +64,7 @@ unlock()            { _lock u; }   # drop a lock
 exlock_now || exit 1
 
 ### BEGIN OF SCRIPT ###
-
+echo "2 of 7. Checking ClamAV user and group."
 CLAMDIR="/var/lib/clamav"
 CLAMUSER="clamupdate"
 CLAMGROUP="clamupdate"
@@ -74,7 +75,7 @@ then
 	CLAMUSER="clamav"
 	CLAMGROUP="clamav"
 fi
-
+echo "Step 2 completed"
 # Don't change anything below this line
 
 RELOAD=0
@@ -83,16 +84,20 @@ RELOAD=0
 TMPDIR="`mktemp`"
 
 # check what binary provides MD5 function:
+echo "3 of 7. Checking required tools"
 MD5BIN="md5sum"
 if [ `command -v $MD5BIN > /dev/null 2> /dev/null`]
 then
 	MD5BIN="md5"
 fi
-
+echo "Step 3 completed"
 
 # download databases:
+echo "4 of 7. Downloading available update"
 curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o $TMPDIR/urlhaus.ndb
+echo "Step 4 completed"
 
+echo "5 of 7. Update verification"
 if [ $? -eq 0 ]; then
 	clamscan --quiet -d $TMPDIR $TMPDIR 2> /dev/null >/dev/null
 	if [ $? -eq 0 ]; then
@@ -113,9 +118,16 @@ if [ $? -eq 0 ]; then
 		fi
 	fi
 fi
+echo "Step 5 completed"
 
+echo "6 of 7. Reloading ClamAV"
 if [ $RELOAD -eq 1 ]; then
 	clamdscan --reload
 fi
+echo "Step 6 completed"
 
+echo "7 of 7. Removing temporary files"
+unlock 
 rm -rf $TMPDIR
+echo "Step 7 completed"
+
