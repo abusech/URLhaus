@@ -7,7 +7,7 @@
 # Please set up the following variables to fit your system
 
 ### HEADER ###
-LOCKDIR="/var/lock/" 
+LOCKDIR="/var/lock" 
 
 # check if lock directory exists:
 if [! -d $LOCKDIR ]
