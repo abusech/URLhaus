@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # This script updates Clamav definitions with data from URLhaus (https://urlhaus.abuse.ch/api/#clamav)
 #
