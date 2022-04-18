@@ -36,7 +36,7 @@ fi
 # PRIVATE
 LOCKCMD="flock"
 FBSD_FLOCK="sysutils/flock"
-if [ ! `command -v $LOCKCMD > /dev/null 2> /dev/null` ]
+if [ `command -v $LOCKCMD > /dev/null 2> /dev/null` ]
 then
 	if [ $PLATFORM = "freebsd" ]
 	then 
@@ -81,11 +81,10 @@ RELOAD=0
 
 # Create TEMP directory:
 TMPDIR="`mktemp`"
-mkdir -p $TMPDIR
 
 # check what binary provides MD5 function:
 MD5BIN="md5sum"
-if [ ! `command -v $MD5BIN > /dev/null 2> /dev/null`]
+if [ `command -v $MD5BIN > /dev/null 2> /dev/null`]
 then
 	MD5BIN="md5"
 fi
