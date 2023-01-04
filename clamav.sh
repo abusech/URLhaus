@@ -6,45 +6,54 @@
 #
 # Please set up the following variables to fit your system
 
-CLAMDIR="/var/lib/clamav"
-CLAMUSER="clamav"
-CLAMGROUP="clamav"
+# Notes about changes:
+# * It is recommended that you execute this script as "clamav" user which should have write access to
+#   /var/lib/clamav. 
+# * Instead of downloading the signatures every minute, we check against its SHA256 sum before downloading 
+#   (which reduces load on the server).
+# * Using random temporally directory
+# * As it should be executed at least every minute, we remove the need of a lock file for simplicity and 
+#   compatibility
+# * Instead of testing with clamdscan we assume that if the downloaded file matches the original hash, it 
+#   should work fine (speed up process)
 
-# Don't change anything below this line
+CLAMDIR="/var/lib/clamav"
+
+# ----------------------------------------------------------------------------------------
 
 RELOAD=0
 
-lockfile -r 0 /tmp/local.the.lock 2>/dev/null || exit 1
+# Check current SHA256 sum:
+NEWHASH=$(curl -m 10 -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb.sha256)
 
-rm -rf /tmp/urlhaus
-mkdir /tmp/urlhaus
-
-curl -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o /tmp/urlhaus/urlhaus.ndb
-
-if [ $? -eq 0 ]; then
-  clamscan --quiet -d /tmp/urlhaus /tmp/urlhaus 2>&1 >/dev/null
-  if [ $? -eq 0 ]; then
-    if [ -f "$CLAMDIR"/urlhaus.ndb ]; then
-      MD5old=`md5sum "$CLAMDIR"/urlhaus.ndb`
-      MD5new=`md5sum /tmp/urlhaus/urlhaus.ndb`
-      if ! [ "$MD5old" = "$MD5new" ]; then
-        # Updated file
-        cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
-        chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
+function download {
+    TMPDIR=$(mktemp -d)
+    TMPNDB="$TMPDIR/urlhaus.ndb"
+    curl -m 30 -s https://urlhaus.abuse.ch/downloads/urlhaus.ndb -o "$TMPNDB"
+    DOWNHASH=$(sha256sum "$TMPNDB" | awk '{ print $1 }')
+    # Test that the file is not corrupt (replaced with a fastest way)
+    if [[ "$DOWNHASH" == "$NEWHASH" ]]; then
+        mv "$TMPNDB" "$CLAMDIR/"
         RELOAD=1
-      fi
-    else
-      # Looks like it's the first run
-      cp /tmp/urlhaus/urlhaus.ndb $CLAMDIR
-      chown $CLAMUSER.$CLAMGROUP "$CLAMDIR"/urlhaus.ndb
-      RELOAD=1
     fi
-  fi
-fi
+    rm -rf $TMPDIR
+}
 
-if [ $RELOAD -eq 1 ]; then
-  clamdscan --reload
-fi
+# Check that the response is correctly:
+if [[ $NEWHASH != "" && $(echo -n "$NEWHASH" | wc -c) == 64 ]]; then
 
-rm -rf /tmp/urlhaus
-rm -f /tmp/local.the.lock
+    if [[ -e "$CLAMDIR/urlhaus.ndb" ]]; then
+        CURRHASH=$(sha256sum "$CLAMDIR/urlhaus.ndb" | awk '{ print $1 }');
+        if [[ "$CURRHASH" != "$NEWHASH" ]]; then
+            download
+        fi
+    else
+        # Looks like it's the first run
+        download
+    fi
+
+    if [[ $RELOAD == 1 ]]; then
+      clamdscan --reload
+    fi
+
+fi
