@@ -3,10 +3,16 @@ import sys
 import requests
 import json
 
-def query_urlhaus(url):
+def query_urlhaus(auth_key, url):
     # Construct the HTTP request
-    data = {'url' : url}
-    response = requests.post('https://urlhaus-api.abuse.ch/v1/url/', data)
+    data = {
+        'url' : url
+    }
+    # Set the Authentication header
+    headers = {
+        "Auth-Key"      :   auth_key
+    }
+    response = requests.post('https://urlhaus-api.abuse.ch/v1/url/', data, headers=headers)
     # Parse the response from the API
     json_response = response.json()
     if json_response['query_status'] == 'ok':
@@ -14,10 +20,11 @@ def query_urlhaus(url):
     elif json_response['query_status'] == 'no_results':
         print("No results")
     else:
-        print("Something went wrong")
+        print(json_response['query_status'])
 
-if len(sys.argv) > 1:
-    query_urlhaus(sys.argv[1])
+if len(sys.argv) > 2:
+    query_urlhaus(sys.argv[1], sys.argv[2])
 else:
     print("Looking up a URL on the URLhaus bulk API")
-    print("Usage: python3 lookup_url.py <URL>")
+    print("Usage: python3 lookup_url.py <YOUR-AUTH-KEY> <URL>")
+    print("Note: If you don't have an Auth-Key yet, you can obtain one at https://auth.abuse.ch/")
