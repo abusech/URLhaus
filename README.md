@@ -2,7 +2,7 @@
 URLhaus is an open platform for sharing malware distribution sites. This repository provides some sample python3 scripts on how to interact with the URLhaus bulk API.
 
 ## Obtain an Auth-Key
-In order to query the URLhaus API, you ned to obtain an ```Auth-Key```.  If you don't have an Auth-Key yet, you can get one at https://auth.abuse.ch/ for free.
+In order to query the URLhaus API, you need to obtain an ```Auth-Key```.  If you don't have an Auth-Key yet, you can get one at https://auth.abuse.ch/ for free.
 
 ## Report a malware URL
 This script lets you report a malware URL to URLhaus:
