@@ -8,7 +8,7 @@ def report_urlhaus(auth_key, url):
       'anonymous' : '0',
       'submission' : [
         {
-          'url'     : 'http://evildomain1.tld/bad',
+          'url'     : url,
           'threat'  : 'malware_download',
           'tags'    : [
             'Emotet',
