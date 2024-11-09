@@ -25,7 +25,7 @@ def query_urlhaus(auth_key, file_hash):
     headers = {
         "Auth-Key"      :   auth_key
     }
-    response = pool.request_encode_body("POST", "/v1/payload/", fields=data, encode_multipart=False)
+    response = pool.request_encode_body("POST", "/v1/payload/", fields=data, encode_multipart=False, headers=headers)
     # Parse the response from the API
     response = response.data.decode("utf-8", "ignore")
     # Convert response to JSON
@@ -36,7 +36,7 @@ def query_urlhaus(auth_key, file_hash):
     elif json_response['query_status'] == 'no_results':
         print(f"[-] Not found: {file_hash}")
     else:
-        print(f"[-] Error:     {file_hash}")
+        print(f"[-] Error:     {file_hash}: {json_response['query_status']}")
 
 if len(sys.argv) > 2:
     if not os.path.isfile(sys.argv[2]):
