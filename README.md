@@ -1,6 +1,15 @@
 # URLhaus
 URLhaus is an open platform for sharing malware distribution sites. This repository provides some sample python3 scripts on how to interact with the URLhaus bulk API.
 
+## Report a malware URL
+This script lets you report a malware URL to URLhaus:
+
+```
+python3 submit_url.py <YOUR-AUTH-KEY> http://evildomain1.tld/bad
+```
+
+Note: If you don't have an Auth-Key yet, you can obtain one at https://auth.abuse.ch/
+
 ## Lookup a URL
 This script calls the URLhaus [URL information endpoint](https://urlhaus-api.abuse.ch/#urlinfo), looking up a particular URL in the URLhaus database:
 
